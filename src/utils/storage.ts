@@ -242,6 +242,28 @@ export function resetAllData(): void {
 }
 
 /**
+ * Converts a base64 data URL to a Blob.
+ * Uses fetch() first, with a manual fallback for mobile browsers
+ * where fetch(dataUrl) may fail with large strings.
+ */
+async function base64ToBlob(base64Data: string): Promise<Blob> {
+  try {
+    const response = await fetch(base64Data);
+    return await response.blob();
+  } catch {
+    // Manual fallback: parse the data URL and convert via atob + Uint8Array
+    const parts = base64Data.split(',');
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const raw = atob(parts[1]);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) {
+      arr[i] = raw.charCodeAt(i);
+    }
+    return new Blob([arr], { type: mime });
+  }
+}
+
+/**
  * Uploads a photo to Supabase Storage and returns its public URL.
  */
 export async function uploadPhoto(
@@ -250,12 +272,12 @@ export async function uploadPhoto(
   clueId: string,
   base64Data: string
 ): Promise<string> {
-  const blob = await fetch(base64Data).then(r => r.blob());
+  const blob = await base64ToBlob(base64Data);
   const path = `${eventId}/${teamId}/${clueId}.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from('photos')
-    .upload(path, blob, { upsert: true });
+    .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
 
   if (uploadError) {
     throw new Error(`[Supabase Storage] Upload failed: ${uploadError.message}`);

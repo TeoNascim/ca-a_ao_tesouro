@@ -20,45 +20,53 @@ import {
 import { Html5Qrcode } from 'html5-qrcode';
 
 /**
- * Compresses an image to a maximum dimension and low-JPEG quality
- * to guarantee it fits easily under Firestore's 1MB document limit.
+ * Compresses an image source (base64 or object URL) to a maximum dimension
+ * and low-JPEG quality for efficient storage.
  */
-function compressImage(base64Str: string, maxDim: number = 600, quality: number = 0.5): Promise<string> {
+function compressImage(imgSrc: string, maxDim: number = 600, quality: number = 0.5): Promise<string> {
   return new Promise((resolve) => {
-    if (!base64Str || !base64Str.startsWith('data:image/')) {
-      resolve(base64Str);
-      return;
-    }
+    try {
+      if (!imgSrc) {
+        resolve(imgSrc);
+        return;
+      }
 
-    const img = new Image();
-    img.onload = () => {
-      let width = img.width;
-      let height = img.height;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } else {
+            resolve(imgSrc);
+          }
+        } catch {
+          resolve(imgSrc);
         }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      } else {
-        resolve(base64Str);
-      }
-    };
-    img.onerror = () => {
-      resolve(base64Str);
-    };
-    img.src = base64Str;
+      };
+      img.onerror = () => {
+        resolve(imgSrc);
+      };
+      img.src = imgSrc;
+    } catch {
+      resolve(imgSrc);
+    }
   });
 }
 
@@ -528,85 +536,132 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
   };
 
   // UPLOAD FILE AS BASE64 HANDLER supporting photos and videos up to 10 seconds
+  // Uses URL.createObjectURL instead of FileReader to avoid loading the full
+  // high-resolution image into memory as a Base64 string (which crashes mobile browsers).
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    if (file.type.startsWith('video/')) {
-      // Create memory video element to check duration
-      const videoUrl = URL.createObjectURL(file);
-      const tempVideo = document.createElement('video');
-      tempVideo.preload = 'metadata';
-      tempVideo.src = videoUrl;
-      tempVideo.onloadedmetadata = () => {
-        URL.revokeObjectURL(videoUrl);
-        if (tempVideo.duration > 15.5) { // slightly lenient for 10s limits
-          alert('O vídeo deve ter no máximo 15 segundos!');
-          return;
-        }
-        
-        // Extract a frame as a readable image proof so that it fits in Firestore <1MB
-        getVideoFrame(file).then(frameUrl => {
-          if (frameUrl) {
-            setCapturedPhotoBase64(frameUrl);
-          } else {
-            alert('Falha ao processar vídeo. Tente enviar uma foto ou imagem.');
+      if (file.type.startsWith('video/')) {
+        // Create memory video element to check duration
+        const videoUrl = URL.createObjectURL(file);
+        const tempVideo = document.createElement('video');
+        tempVideo.preload = 'metadata';
+        tempVideo.src = videoUrl;
+        tempVideo.onloadedmetadata = () => {
+          URL.revokeObjectURL(videoUrl);
+          if (tempVideo.duration > 15.5) { // slightly lenient for 10s limits
+            alert('O vídeo deve ter no máximo 15 segundos!');
+            return;
           }
-        });
-      };
-      tempVideo.onerror = () => {
-        URL.revokeObjectURL(videoUrl);
-        alert('Falha ao abrir vídeo para verificação de tempo.');
-      };
-    } else {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          // Compress image of proof aggressively to fit under 1MB easily and fast!
-          compressImage(reader.result, 450, 0.35).then(compressed => {
-            setCapturedPhotoBase64(compressed);
+          
+          // Extract a frame as a readable image proof
+          getVideoFrame(file).then(frameUrl => {
+            if (frameUrl) {
+              setCapturedPhotoBase64(frameUrl);
+            } else {
+              alert('Falha ao processar vídeo. Tente enviar uma foto ou imagem.');
+            }
+          }).catch(() => {
+            alert('Falha ao processar vídeo. Tente enviar uma foto.');
           });
-        }
-      };
-      reader.readAsDataURL(file);
+        };
+        tempVideo.onerror = () => {
+          URL.revokeObjectURL(videoUrl);
+          alert('Falha ao abrir vídeo para verificação de tempo.');
+        };
+      } else {
+        // MOBILE FIX: Use URL.createObjectURL instead of FileReader.readAsDataURL
+        // FileReader loads the ENTIRE high-res photo (20-50MB on modern phones)
+        // as a Base64 string in memory, which crashes mobile browsers.
+        // createObjectURL creates a lightweight binary reference instead.
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          try {
+            URL.revokeObjectURL(objectUrl);
+            const maxDim = 450;
+            let width = img.width;
+            let height = img.height;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', 0.35);
+              setCapturedPhotoBase64(compressed);
+            } else {
+              alert('Falha ao processar imagem. Tente novamente.');
+            }
+          } catch (err) {
+            console.error('Image compression error:', err);
+            alert('Falha ao processar imagem. Tente uma foto menor.');
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          alert('Falha ao carregar imagem. Tente outro arquivo.');
+        };
+        img.src = objectUrl;
+      }
+    } catch (err) {
+      console.error('handleFileUpload error:', err);
+      alert('Erro ao processar arquivo. Tente novamente.');
     }
   };
 
   // SAVE PROGRESS AND DEFER STEP UNTIL FACILITATOR MANUALLY APPROVES PROOF (Request 5)
   const handleSaveAndAdvance = async () => {
-    if (!gameState || !activeClue || !capturedPhotoBase64) return;
-
-    // Show instant "sucesso" message on player device
-    setSubmissionStatus('success_toast');
-
-    // Upload photo to Supabase Storage and get the public URL
-    let photoRef = capturedPhotoBase64; // fallback to base64 if upload fails
     try {
-      photoRef = await uploadPhoto(gameState.eventId, gameState.teamId, activeClue.id, capturedPhotoBase64);
+      if (!gameState || !activeClue || !capturedPhotoBase64) return;
+
+      // Show instant "sucesso" message on player device
+      setSubmissionStatus('success_toast');
+
+      // Upload photo to Supabase Storage and get the public URL
+      let photoRef = capturedPhotoBase64; // fallback to base64 if upload fails
+      try {
+        photoRef = await uploadPhoto(gameState.eventId, gameState.teamId, activeClue.id, capturedPhotoBase64);
+      } catch (err) {
+        console.error('Photo upload to Supabase Storage failed, using base64 fallback:', err);
+      }
+
+      const updatedPhotos = {
+        ...gameState.photos,
+        [activeClue.id]: photoRef
+      };
+
+      const updatedState: GameplayState = {
+        ...gameState,
+        photos: updatedPhotos,
+        pendingValidation: true // Require Facilitator Validation!
+      };
+
+      // Save gameplay immediately to database so that there is no polling/timing race condition!
+      saveGameplay(updatedState);
+      setGameState(updatedState);
+      onRefreshTrigger();
+
+      // Exactly 2 seconds later, transition from success_toast to waiting state
+      setTimeout(() => {
+        setSubmissionStatus('waiting');
+      }, 2000);
     } catch (err) {
-      console.error('Photo upload to Supabase Storage failed, using base64 fallback:', err);
+      console.error('handleSaveAndAdvance error:', err);
+      alert('Erro ao salvar prova. Tente novamente.');
+      setSubmissionStatus(null);
     }
-
-    const updatedPhotos = {
-      ...gameState.photos,
-      [activeClue.id]: photoRef
-    };
-
-    const updatedState: GameplayState = {
-      ...gameState,
-      photos: updatedPhotos,
-      pendingValidation: true // Require Facilitator Validation!
-    };
-
-    // Save gameplay immediately to database so that there is no polling/timing race condition!
-    saveGameplay(updatedState);
-    setGameState(updatedState);
-    onRefreshTrigger();
-
-    // Exactly 2 seconds later, transition from success_toast to waiting state
-    setTimeout(() => {
-      setSubmissionStatus('waiting');
-    }, 2000);
   };
 
   // RESET gameplay states for team
