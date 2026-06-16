@@ -211,51 +211,60 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
     let previousIndex = gameState?.currentClueIndex ?? 0;
 
     const syncState = () => {
-      const activeState = getGameplay(selectedEventId, selectedTeamId);
-      if (activeState) {
-        setGameState(activeState);
+      try {
+        const activeState = getGameplay(selectedEventId, selectedTeamId);
+        if (activeState) {
+          // Ensure photos is always an object (Supabase JSONB might return null)
+          if (!activeState.photos || typeof activeState.photos !== 'object') {
+            activeState.photos = {};
+          }
+          setGameState(activeState);
 
-        // Reset waiting flags if no longer pending, but preserve the success celebration toast if it's running
-        setSubmissionStatus(prev => {
-          if (prev === 'success_toast') return prev;
-          return activeState.pendingValidation ? 'waiting' : 'idle';
-        });
+          // Reset waiting flags if no longer pending, but preserve the success celebration toast if it's running
+          setSubmissionStatus(prev => {
+            if (prev === 'success_toast') return prev;
+            return activeState.pendingValidation ? 'waiting' : 'idle';
+          });
 
-        const currentClue = getEventClues()[activeState.currentClueIndex];
-        if (activeState.currentClueIndex !== previousIndex) {
-          // Facilitator approved step advancement! Reset local state variables
+          const eventClues = getEventClues();
+          const currentClue = eventClues[activeState.currentClueIndex];
+          if (activeState.currentClueIndex !== previousIndex) {
+            // Facilitator approved step advancement! Reset local state variables
+            setIsQrValidated(false);
+            setCapturedPhotoBase64(null);
+            setTypedQrCode('');
+            setQrValidationError('');
+            setQrSuccessMessage('');
+            previousIndex = activeState.currentClueIndex;
+          } else if (currentClue && activeState.photos && activeState.photos[currentClue.id]) {
+            setIsQrValidated(true);
+            setCapturedPhotoBase64(activeState.photos[currentClue.id]);
+          } else {
+            // If the image was in pending validation but now it's not and has no photo in database,
+            // it means the facilitator rejected/invalidated it. Only in this case do we clear the local draft.
+            const wasWaiting = gameState?.pendingValidation || submissionStatus === 'waiting';
+            const isWaitingNow = activeState.pendingValidation;
+            if (wasWaiting && !isWaitingNow) {
+              setCapturedPhotoBase64(null);
+            }
+          }
+        } else {
+          const newState: GameplayState = {
+            eventId: selectedEventId,
+            teamId: selectedTeamId,
+            currentClueIndex: 0,
+            isCompleted: false,
+            photos: {},
+            startedAt: new Date().toISOString()
+          };
+          saveGameplay(newState);
+          setGameState(newState);
           setIsQrValidated(false);
           setCapturedPhotoBase64(null);
-          setTypedQrCode('');
-          setQrValidationError('');
-          setQrSuccessMessage('');
-          previousIndex = activeState.currentClueIndex;
-        } else if (currentClue && activeState.photos[currentClue.id]) {
-          setIsQrValidated(true);
-          setCapturedPhotoBase64(activeState.photos[currentClue.id]);
-        } else {
-          // If the image was in pending validation but now it's not and has no photo in database,
-          // it means the facilitator rejected/invalidated it. Only in this case do we clear the local draft.
-          const wasWaiting = gameState?.pendingValidation || submissionStatus === 'waiting';
-          const isWaitingNow = activeState.pendingValidation;
-          if (wasWaiting && !isWaitingNow) {
-            setCapturedPhotoBase64(null);
-          }
+          setSubmissionStatus('idle');
         }
-      } else {
-        const newState: GameplayState = {
-          eventId: selectedEventId,
-          teamId: selectedTeamId,
-          currentClueIndex: 0,
-          isCompleted: false,
-          photos: {},
-          startedAt: new Date().toISOString()
-        };
-        saveGameplay(newState);
-        setGameState(newState);
-        setIsQrValidated(false);
-        setCapturedPhotoBase64(null);
-        setSubmissionStatus('idle');
+      } catch (err) {
+        console.error('[syncState] Error syncing game state:', err);
       }
     };
 

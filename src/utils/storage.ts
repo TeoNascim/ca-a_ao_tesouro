@@ -144,14 +144,30 @@ export function saveClues(clues: Clue[]): void {
 
 // GAMEPLAY PROGRESS HELPERS
 export function getGameplayStates(): GameplayState[] {
-  const raw = localStorage.getItem(KEY_GAMEPLAY);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = localStorage.getItem(KEY_GAMEPLAY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
 }
 
 export function getGameplay(eventId: string, teamId: string): GameplayState | null {
   const states = getGameplayStates();
-  const state = states.find(s => s.eventId === eventId && s.teamId === teamId);
-  return state || null;
+  const state = states.find(s => s?.eventId === eventId && s?.teamId === teamId);
+  if (!state) return null;
+  // Sanitize: ensure photos is always an object (Supabase JSONB might return null)
+  if (!state.photos || typeof state.photos !== 'object') {
+    state.photos = {};
+  }
+  // Sanitize: ensure currentClueIndex is always a number
+  if (typeof state.currentClueIndex !== 'number' || isNaN(state.currentClueIndex)) {
+    state.currentClueIndex = 0;
+  }
+  return state;
 }
 
 export function saveGameplay(state: GameplayState): void {

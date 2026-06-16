@@ -48,10 +48,23 @@ export default function App() {
         if (cluesRes.error) throw cluesRes.error;
         if (gameplayRes.error) throw gameplayRes.error;
 
-        const events = eventsRes.data as Event[];
-        const teams = teamsRes.data as Team[];
-        const clues = cluesRes.data as Clue[];
-        const gameplay = gameplayRes.data as GameplayState[];
+        const events = (eventsRes.data || []) as Event[];
+        const teams = (teamsRes.data || []) as Team[];
+        const clues = (cluesRes.data || []) as Clue[];
+        // Sanitize gameplay data from Supabase:
+        // - photos JSONB may be null, ensure it's always an object
+        // - Supabase rows include a primary key 'id' field not in our GameplayState type
+        const rawGameplay = (gameplayRes.data || []) as any[];
+        const gameplay: GameplayState[] = rawGameplay.map(g => ({
+          eventId: g.eventId || '',
+          teamId: g.teamId || '',
+          currentClueIndex: typeof g.currentClueIndex === 'number' ? g.currentClueIndex : 0,
+          isCompleted: !!g.isCompleted,
+          photos: (g.photos && typeof g.photos === 'object') ? g.photos : {},
+          startedAt: g.startedAt || new Date().toISOString(),
+          completedAt: g.completedAt || undefined,
+          pendingValidation: !!g.pendingValidation,
+        }));
 
         // If Supabase database is fresh & brand new, seed it with the mock data
         if (events.length === 0) {
