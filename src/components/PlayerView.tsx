@@ -170,6 +170,10 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
   const [scannerErrorMessage, setScannerErrorMessage] = useState('');
   const [scannedValue, setScannedValue] = useState('');
   const qrScannerRef = useRef<Html5Qrcode | null>(null);
+  // Container ref to isolate html5-qrcode's DOM manipulation from React's reconciliation.
+  // html5-qrcode inserts <video>/<canvas> elements directly into the DOM, which conflicts
+  // with React's virtual DOM → causes 'insertBefore' crash on mobile re-renders.
+  const qrContainerRef = useRef<HTMLDivElement>(null);
 
   // Optical Capture/Simulation states
   const [capturedPhotoBase64, setCapturedPhotoBase64] = useState<string | null>(null);
@@ -306,16 +310,28 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
   // Effect to control the physical QR scanner camera instance
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
+    let qrReaderId = '';
     
     if (isScannerActive && !isQrValidated) {
       setScannerErrorMessage('');
       setScannedValue('');
       
       const timer = setTimeout(() => {
-        const element = document.getElementById("qr-reader");
-        if (element) {
+        const container = qrContainerRef.current;
+        if (container) {
           try {
-            html5QrCode = new Html5Qrcode("qr-reader");
+            // CRITICAL FIX: Create the qr-reader div PROGRAMMATICALLY
+            // so React never tries to reconcile html5-qrcode's internal DOM changes.
+            // This prevents the 'insertBefore' NotFoundError on mobile.
+            container.innerHTML = '';
+            const readerDiv = document.createElement('div');
+            qrReaderId = 'qr-reader-' + Date.now();
+            readerDiv.id = qrReaderId;
+            readerDiv.style.width = '100%';
+            readerDiv.style.height = '100%';
+            container.appendChild(readerDiv);
+
+            html5QrCode = new Html5Qrcode(qrReaderId);
             qrScannerRef.current = html5QrCode;
             
             html5QrCode.start(
@@ -336,7 +352,6 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                 setScannedValue(detectedCode);
                 
                 if (currentClue && detectedCode === currentClue.qrCode.toUpperCase()) {
-                  // Perfect match! Validated!
                   setQrSuccessMessage('Sucesso!');
                   setIsQrValidated(true);
                   setQrValidationError('');
@@ -346,7 +361,6 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                     html5QrCode.stop().catch(e => console.warn(e));
                   }
                 } else {
-                  // Mismatch with strict error message and cooldown (Request 3 & 4)
                   setQrValidationError('QR code inválido');
                   setIsQrCooldown(true);
                   isQrCooldownRef.current = true;
@@ -371,17 +385,26 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
             setIsScannerActive(false);
           }
         }
-      }, 250);
+      }, 300);
 
       return () => {
         clearTimeout(timer);
         if (html5QrCode) {
-          if (html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-              qrScannerRef.current = null;
-            }).catch(e => console.warn(e));
-          } else {
+          const scanner = html5QrCode;
+          const cleanup = () => {
             qrScannerRef.current = null;
+            // Safely clear the container DOM (outside React's control)
+            if (qrContainerRef.current) {
+              qrContainerRef.current.innerHTML = '';
+            }
+          };
+          if (scanner.isScanning) {
+            scanner.stop().then(cleanup).catch((e) => {
+              console.warn('Scanner stop error:', e);
+              cleanup();
+            });
+          } else {
+            cleanup();
           }
         }
       };
@@ -1143,8 +1166,8 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                               <div className="space-y-3" id="live-scan-viewarea">
                                 {/* The scanning element box */}
                                 <div className="relative mx-auto rounded-xl overflow-hidden border-2 border-indigo-500 bg-slate-950 aspect-square max-w-[240px] flex flex-col justify-center items-center shadow-inner" id="scanner-element-box">
-                                  {/* html5-qrcode live video binds here */}
-                                  <div id="qr-reader" className="w-full h-full"></div>
+                                  {/* html5-qrcode container: managed via ref, NOT by React */}
+                                  <div ref={qrContainerRef} className="w-full h-full"></div>
                                   
                                   {/* Aesthetic layout targets overlays */}
                                   <div className="absolute inset-4 border border-dashed border-indigo-400/50 pointer-events-none rounded-xl flex items-center justify-center">
