@@ -167,6 +167,10 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Refs to avoid stale closures in QR scanner callbacks
+  const activeClueRef = useRef<Clue | undefined>(undefined);
+  const isQrCooldownRef = useRef(false);
+
   // Filter clues for active event, sorted by sequence, then shuffled deterministically per team
   const getEventClues = (): Clue[] => {
     const baseClues = clues
@@ -181,6 +185,10 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
 
   const activeCluesList = getEventClues();
   const activeClue: Clue | undefined = gameState ? activeCluesList[gameState.currentClueIndex] : undefined;
+
+  // Keep refs in sync for QR scanner callbacks
+  activeClueRef.current = activeClue;
+  isQrCooldownRef.current = isQrCooldown;
 
   // Reload data
   useEffect(() => {
@@ -300,11 +308,12 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                 aspectRatio: 1.0
               },
               (decodedText) => {
-                if (isQrCooldown) return;
+                if (isQrCooldownRef.current) return;
+                const currentClue = activeClueRef.current;
                 const detectedCode = decodedText.trim().toUpperCase();
                 setScannedValue(detectedCode);
                 
-                if (activeClue && detectedCode === activeClue.qrCode.toUpperCase()) {
+                if (currentClue && detectedCode === currentClue.qrCode.toUpperCase()) {
                   // Perfect match! Validated!
                   setQrSuccessMessage('Sucesso!');
                   setIsQrValidated(true);
@@ -318,8 +327,10 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                   // Mismatch with strict error message and cooldown (Request 3 & 4)
                   setQrValidationError('QR code inválido');
                   setIsQrCooldown(true);
+                  isQrCooldownRef.current = true;
                   setTimeout(() => {
                     setIsQrCooldown(false);
+                    isQrCooldownRef.current = false;
                     setQrValidationError('');
                   }, 2000);
                 }
@@ -660,7 +671,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
     } catch (err) {
       console.error('handleSaveAndAdvance error:', err);
       alert('Erro ao salvar prova. Tente novamente.');
-      setSubmissionStatus(null);
+      setSubmissionStatus('idle');
     }
   };
 
