@@ -1,0 +1,6 @@
+{
+  "name": "Laterallis",
+  "description": "Plataforma profissional para gestão e execução de dinâmicas de Caça ao Tesouro baseadas em lateralidade e desafios motores.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
