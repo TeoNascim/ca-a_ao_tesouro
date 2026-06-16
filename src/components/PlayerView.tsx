@@ -19,6 +19,19 @@ import {
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
+/** Detects if a media string is a video (data URI or URL with video extension) */
+function isVideoMedia(media: string): boolean {
+  if (!media) return false;
+  if (media.startsWith('data:video/')) return true;
+  try {
+    const url = new URL(media);
+    const path = url.pathname.toLowerCase();
+    return /\.(mp4|webm|ogg|mov|avi|mkv)$/i.test(path);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Compresses an image source (base64 or object URL) to a maximum dimension
  * and low-JPEG quality for efficient storage.
@@ -980,7 +993,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                           </div>
                           {capturedPhotoBase64 && (
                             <div className="mt-4 max-w-[200px] mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md">
-                              {capturedPhotoBase64.startsWith('data:video/') ? (
+                              {isVideoMedia(capturedPhotoBase64) ? (
                                 <video src={capturedPhotoBase64} className="w-full h-28 object-cover" controls playsInline />
                               ) : (
                                 <img src={capturedPhotoBase64} className="w-full h-28 object-cover" />
@@ -1253,7 +1266,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                         {/* RENDER CURRENT PHOTO/VIDEO PREVIEW IF ALREADY CAPTURED */}
                         {capturedPhotoBase64 ? (
                           <div className="relative rounded-xl overflow-hidden border border-indigo-200/80 shadow-sm" id="captured-preview-box">
-                            {capturedPhotoBase64.startsWith('data:video/') ? (
+                            {isVideoMedia(capturedPhotoBase64) ? (
                               <video 
                                 src={capturedPhotoBase64} 
                                 className="w-full h-48 object-contain bg-slate-900"

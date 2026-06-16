@@ -16,12 +16,61 @@ import {
   Plus, Trash2, MapPin, Users, Award, 
   RotateCcw, Sparkles, CheckCircle2, ChevronRight, 
   Eye, Calendar, HelpCircle, Image as ImageIcon, Check, X,
-  Lock, Unlock, EyeOff, KeyRound, Edit
+  Lock, Unlock, EyeOff, KeyRound, Edit, Download, Video
 } from 'lucide-react';
 
 interface AdminPanelProps {
   onRefreshTrigger: () => void;
   refreshTrigger: number;
+}
+
+/** Detects if a media string is a video (data URI or URL with video extension) */
+function isVideoMedia(media: string): boolean {
+  if (!media) return false;
+  if (media.startsWith('data:video/')) return true;
+  // Check URL file extension for video formats
+  try {
+    const url = new URL(media);
+    const path = url.pathname.toLowerCase();
+    return /\.(mp4|webm|ogg|mov|avi|mkv)$/i.test(path);
+  } catch {
+    return false;
+  }
+}
+
+/** Downloads a media file (image or video) from a URL or base64 data URI */
+function downloadMedia(media: string, filename: string) {
+  try {
+    if (media.startsWith('data:')) {
+      // Data URI: create download link directly
+      const link = document.createElement('a');
+      link.href = media;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // URL: fetch as blob then download
+      fetch(media, { mode: 'cors' })
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        })
+        .catch(() => {
+          // Fallback: open in new tab if CORS blocks download
+          window.open(media, '_blank');
+        });
+    }
+  } catch {
+    window.open(media, '_blank');
+  }
 }
 
 export default function AdminPanel({ onRefreshTrigger, refreshTrigger }: AdminPanelProps) {
@@ -1030,7 +1079,11 @@ export default function AdminPanel({ onRefreshTrigger, refreshTrigger }: AdminPa
           >
             <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-indigo-600" />
+                {isVideoMedia(viewingPhoto.photo) ? (
+                  <Video className="w-4 h-4 text-indigo-600" />
+                ) : (
+                  <ImageIcon className="w-4 h-4 text-indigo-600" />
+                )}
                 <h4 className="text-xs font-bold text-slate-800">
                   {viewingPhoto.teamName} - Desafio Motor #{viewingPhoto.clueSeq}
                 </h4>
@@ -1045,7 +1098,7 @@ export default function AdminPanel({ onRefreshTrigger, refreshTrigger }: AdminPa
             </div>
             
             <div className="p-4 bg-slate-50/50 flex items-center justify-center">
-              {viewingPhoto.photo.startsWith('data:video/') ? (
+              {isVideoMedia(viewingPhoto.photo) ? (
                 <video 
                   src={viewingPhoto.photo} 
                   controls 
@@ -1063,45 +1116,60 @@ export default function AdminPanel({ onRefreshTrigger, refreshTrigger }: AdminPa
               )}
             </div>
             
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3">
-              {viewingPhoto.isPending && viewingPhoto.teamId ? (
-                <>
-                  <button
-                    onClick={() => {
-                      if (confirm("Deseja recusar este registro de prova? A equipe precisará enviar um novo registro.")) {
-                        handleRejectProof(viewingPhoto.teamId!);
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col gap-3">
+              {/* Download button - always visible */}
+              <button
+                onClick={() => {
+                  const ext = isVideoMedia(viewingPhoto.photo) ? 'mp4' : 'jpg';
+                  const filename = `${viewingPhoto.teamName.replace(/\s+/g, '_')}_desafio_${viewingPhoto.clueSeq}.${ext}`;
+                  downloadMedia(viewingPhoto.photo, filename);
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+                id="btn-download-media"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Baixar {isVideoMedia(viewingPhoto.photo) ? 'Vídeo' : 'Imagem'}
+              </button>
+
+              {/* Approve/Reject or Close buttons */}
+              <div className="flex gap-3">
+                {viewingPhoto.isPending && viewingPhoto.teamId ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        if (confirm("Deseja recusar este registro de prova? A equipe precisará enviar um novo registro.")) {
+                          handleRejectProof(viewingPhoto.teamId!);
+                          setViewingPhoto(null);
+                        }
+                      }}
+                      className="bg-rose-600 hover:bg-rose-700 active:bg-rose-650 font-bold text-white text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-1"
+                      id="btn-reject-modal"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Recusar
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleApproveProof(viewingPhoto.teamId!);
                         setViewingPhoto(null);
-                      }
-                    }}
-                    className="bg-rose-600 hover:bg-rose-700 active:bg-rose-650 font-bold text-white text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-1"
-                    id="btn-reject-modal"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Recusar / Invalidar
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleApproveProof(viewingPhoto.teamId!);
-                      setViewingPhoto(null);
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-650 font-bold text-white text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-1 shadow-md"
-                    id="btn-approve-modal"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    Aprovar / Validar
-                  </button>
-                </>
-              ) : (
-                <div className="flex-1 text-center">
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-650 font-bold text-white text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 flex-1 shadow-md"
+                      id="btn-approve-modal"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Aprovar
+                    </button>
+                  </>
+                ) : (
                   <button
                     onClick={() => setViewingPhoto(null)}
-                    className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-600 font-bold text-white text-xs px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+                    className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-600 font-bold text-white text-xs px-5 py-2.5 rounded-lg transition-colors cursor-pointer flex-1"
                     id="btn-confirm-close-photo"
                   >
                     Fechar Visualização
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
