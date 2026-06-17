@@ -1100,9 +1100,166 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* QR CODE VALIDATION SECTION - already converted to display toggle above */}
+                  {/* SUB SECTION 2: VALIDATE POSITION WITH QR CODE */}
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm" id="card-clue-qrcode-validation">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-650 block uppercase tracking-wider">
+                        Validação de QR Code no Destino
+                      </span>
+                      <span
+                        style={{ display: isQrValidated ? 'inline-flex' : 'none' }}
+                        className="bg-emerald-50 text-emerald-700 font-bold text-[9px] px-2 py-0.5 rounded border border-emerald-250 items-center gap-1"
+                      >
+                        <Check className="w-2.5 h-2.5" />
+                        VALIDADO
+                      </span>
+                      <span
+                        style={{ display: !isQrValidated ? 'inline-flex' : 'none' }}
+                        className="bg-amber-50 text-amber-700 font-bold text-[9px] px-2 py-0.5 rounded border border-amber-200 items-center gap-1.5"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                        AGUARDANDO
+                      </span>
+                    </div>
+
+                    {/* QR INPUT AREA */}
+                    <div style={{ display: !isQrValidated ? 'block' : 'none' }}>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl" id="tabs-qr-selection">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUseCameraScan(true);
+                              setQrValidationError('');
+                            }}
+                            className={`py-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              useCameraScan
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            Câmera (Escanear)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUseCameraScan(false);
+                              setIsScannerActive(false);
+                              setQrValidationError('');
+                            }}
+                            className={`py-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              !useCameraScan
+                                ? 'bg-white text-indigo-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                            Digitar Código
+                          </button>
+                        </div>
+
+                        {/* CAMERA SCANNER */}
+                        <div style={{ display: useCameraScan ? 'block' : 'none' }} id="camera-scan-container">
+                          <div className="space-y-3">
+                            <p className="text-slate-500 text-xs leading-relaxed text-center">
+                              Aponte sua câmera traseira para o QR Code na plaqueta do ponto final da pista.
+                            </p>
+                            <button
+                              type="button"
+                              style={{ display: !isScannerActive ? 'flex' : 'none' }}
+                              onClick={() => {
+                                setIsScannerActive(true);
+                                setQrValidationError('');
+                              }}
+                              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-md items-center justify-center gap-2 cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
+                              id="btn-activate-scanner"
+                            >
+                              <QrCode className="w-4 h-4 animate-pulse" />
+                              Abrir Scanner da Câmera
+                            </button>
+                            <div style={{ display: isScannerActive ? 'block' : 'none' }} id="live-scan-viewarea">
+                              <div className="space-y-3">
+                                <div className="relative mx-auto rounded-xl overflow-hidden border-2 border-indigo-500 bg-slate-950 aspect-square max-w-[240px] flex flex-col justify-center items-center shadow-inner" id="scanner-element-box">
+                                  <div ref={qrContainerRef} className="w-full h-full"></div>
+                                  <div className="absolute inset-4 border border-dashed border-indigo-400/50 pointer-events-none rounded-xl flex items-center justify-center">
+                                    <div className="w-8 h-8 border-t-2 border-l-2 border-emerald-400 absolute top-0 left-0"></div>
+                                    <div className="w-8 h-8 border-t-2 border-r-2 border-emerald-400 absolute top-0 right-0"></div>
+                                    <div className="w-8 h-8 border-b-2 border-l-2 border-emerald-400 absolute bottom-0 left-0"></div>
+                                    <div className="w-8 h-8 border-b-2 border-r-2 border-emerald-400 absolute bottom-0 right-0"></div>
+                                    <div className="w-full h-0.5 bg-emerald-400/80 shadow-[0_0_8px_rgba(52,211,153,0.8)] absolute top-1/2 left-0 -translate-y-1/2 animate-bounce"></div>
+                                  </div>
+                                </div>
+                                <div style={{ display: scannerErrorMessage ? 'block' : 'none' }}>
+                                  <p className="text-rose-600 text-[10px] font-semibold text-center bg-rose-50 p-2 rounded-lg border border-rose-100">
+                                    {scannerErrorMessage}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsScannerActive(false)}
+                                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
+                                  id="btn-deactivate-scanner"
+                                >
+                                  Fechar Câmera / Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* MANUAL CODE ENTRY */}
+                        <div style={{ display: !useCameraScan ? 'block' : 'none' }} id="manual-code-container">
+                          <div className="space-y-3">
+                            <p className="text-slate-500 text-xs leading-relaxed">
+                              Caso a câmera tenha problemas, digite o código exato impresso na plaqueta física do destino que você encontrou:
+                            </p>
+                            <form onSubmit={handleValidateQrCode} className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Digite o código da placa"
+                                value={typedQrCode}
+                                onChange={e => {
+                                  setTypedQrCode(e.target.value);
+                                  setQrValidationError('');
+                                }}
+                                className="flex-1 bg-slate-50 border border-slate-250 text-slate-800 text-xs font-mono rounded-xl px-3.5 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none uppercase"
+                                id="input-val-qrcode"
+                              />
+                              <button
+                                type="submit"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                id="btn-val-qrcode"
+                              >
+                                <Key className="w-3.5 h-3.5" />
+                                Validar
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+
+                        {/* ERROR FEEDBACK */}
+                        <div style={{ display: qrValidationError ? 'flex' : 'none' }} className="text-rose-600 text-[10px] font-semibold font-sans items-start gap-2 bg-rose-50 p-3 rounded-xl border border-rose-150 shadow-sm" id="p-qrcode-error">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-rose-500" />
+                          <p className="leading-tight">{qrValidationError}</p>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <span className="text-[9px] text-slate-400 italic">Equipamento com calibragem corporal ativa</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* VALIDATED SUCCESS MESSAGE */}
+                    <div style={{ display: isQrValidated ? 'flex' : 'none' }} className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl items-center gap-3 animate-fade-in">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-emerald-850">Plaqueta Validada!</p>
+                        <p className="text-[10px] text-slate-550">Seu posicionamento de lateralidade está correto. Siga para a prova motor abaixo!</p>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* SUB SECTION 3: MOTOR CHALLENGE + PHOTO CAPTURE */}
                   <div style={{ display: isQrValidated ? 'block' : 'none' }}>
@@ -1298,6 +1455,8 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                       <RotateCcw className="w-3 h-3" />
                       Reiniciar progresso desta equipe
                     </button>
+                  </div>
+
                   </div>
 
                 </div>
