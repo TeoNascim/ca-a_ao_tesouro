@@ -12,31 +12,48 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  retryCount: number;
 }
 
+const MAX_AUTO_RETRIES = 3;
+
 /**
- * Error Boundary catches React rendering crashes and shows a
- * recovery UI instead of a white screen.
+ * Error Boundary that auto-retries on DOM reconciliation errors (insertBefore)
+ * and preserves session state so reloads don't go back to the start.
  */
 export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryCount: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] React crash captured:', error, errorInfo);
+    console.error('[ErrorBoundary] React crash captured:', error.message);
+
+    // Auto-retry on DOM reconciliation errors (insertBefore, removeChild, etc.)
+    const isDomError = error.message?.includes('insertBefore') 
+      || error.message?.includes('removeChild')
+      || error.message?.includes('appendChild')
+      || error.name === 'NotFoundError';
+
+    if (isDomError && this.state.retryCount < MAX_AUTO_RETRIES) {
+      console.log(`[ErrorBoundary] Auto-retrying (${this.state.retryCount + 1}/${MAX_AUTO_RETRIES})...`);
+      setTimeout(() => {
+        this.setState(prev => ({
+          hasError: false,
+          error: null,
+          retryCount: prev.retryCount + 1
+        }));
+      }, 500);
+    }
   }
 
   handleReload = () => {
-    // Clear potentially corrupted localStorage gameplay state
-    try {
-      localStorage.removeItem('lateral_hunt_gameplay');
-    } catch {}
+    // Preserve session - DO NOT clear gameplay or session data
     window.location.reload();
   };
 
@@ -89,10 +106,9 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
               margin: '0 0 20px',
               lineHeight: 1.5
             }}>
-              Um erro inesperado ocorreu. Clique abaixo para recarregar.
+              Um erro inesperado ocorreu. Clique abaixo para continuar de onde parou.
             </p>
 
-            {/* Show the actual error for debugging */}
             <details style={{
               marginBottom: '20px',
               textAlign: 'left',
@@ -134,7 +150,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
                 cursor: 'pointer'
               }}
             >
-              Recarregar Aplicação
+              Recarregar Aplicativo
             </button>
           </div>
         </div>
