@@ -8,7 +8,7 @@ import { Event, Team, Clue, GameplayState } from '../types';
 import { 
   getEvents, getTeams, getClues, 
   getGameplay, saveGameplay, deleteGameplay,
-  getTeamClueSequence, uploadPhoto
+  getTeamClueSequence, uploadPhoto, getGameplayStates
 } from '../utils/storage';
 import { 
   User, CheckCircle, Camera, Check, 
@@ -894,6 +894,78 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                   Vocês calibraram perfeitamente a lateralidade corporal, seguiram todas as rotas e decifraram os códigos estipulados!
                 </p>
               </div>
+
+              {/* TEMPO E RANKING */}
+              {(() => {
+                const startMs = gameState?.startedAt ? new Date(gameState.startedAt).getTime() : 0;
+                const endMs = gameState?.completedAt ? new Date(gameState.completedAt).getTime() : 0;
+                const elapsedMs = endMs && startMs ? endMs - startMs : 0;
+                
+                const formatTime = (ms: number) => {
+                  if (ms <= 0) return '--:--:--';
+                  const totalSecs = Math.floor(ms / 1000);
+                  const hrs = Math.floor(totalSecs / 3600);
+                  const mins = Math.floor((totalSecs % 3600) / 60);
+                  const secs = totalSecs % 60;
+                  if (hrs > 0) return `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+                  return `${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+                };
+
+                // Calculate ranking position
+                const allStates = getGameplayStates().filter(s => s.eventId === selectedEventId && s.isCompleted && s.completedAt && s.startedAt);
+                const ranked = allStates
+                  .map(s => ({ teamId: s.teamId, elapsed: new Date(s.completedAt!).getTime() - new Date(s.startedAt).getTime() }))
+                  .sort((a, b) => a.elapsed - b.elapsed);
+                const myPosition = ranked.findIndex(r => r.teamId === selectedTeamId) + 1;
+                const totalCompleted = ranked.length;
+
+                const podiumEmojis = ['🥇', '🥈', '🥉'];
+                const podiumLabels = ['Campeão!', '2º Lugar!', '3º Lugar!'];
+                const podiumColors = [
+                  'from-amber-400 to-yellow-500 text-white',
+                  'from-slate-300 to-slate-400 text-white', 
+                  'from-orange-400 to-amber-500 text-white'
+                ];
+
+                return (
+                  <div className="space-y-3">
+                    {/* TIME DISPLAY */}
+                    <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-center justify-center gap-3">
+                      <Clock className="w-5 h-5 text-indigo-600" />
+                      <div className="text-center">
+                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Tempo Total</p>
+                        <p className="text-xl font-extrabold font-mono text-indigo-700">{formatTime(elapsedMs)}</p>
+                      </div>
+                    </div>
+
+                    {/* RANKING POSITION */}
+                    {myPosition > 0 && (
+                      <div className={`p-4 rounded-xl text-center space-y-1 ${
+                        myPosition <= 3 
+                          ? `bg-gradient-to-br ${podiumColors[myPosition - 1]} shadow-lg` 
+                          : 'bg-slate-100 border border-slate-200'
+                      }`}>
+                        {myPosition <= 3 ? (
+                          <>
+                            <span className="text-3xl">{podiumEmojis[myPosition - 1]}</span>
+                            <p className="text-sm font-extrabold">{podiumLabels[myPosition - 1]}</p>
+                            <p className="text-[10px] opacity-90 font-medium">
+                              {myPosition}º de {totalCompleted} equipe{totalCompleted > 1 ? 's' : ''} concluída{totalCompleted > 1 ? 's' : ''}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-lg font-extrabold text-slate-700">{myPosition}º Lugar</p>
+                            <p className="text-[10px] text-slate-500">
+                              de {totalCompleted} equipe{totalCompleted > 1 ? 's' : ''} concluída{totalCompleted > 1 ? 's' : ''}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* STATS CAPSULE */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-left">

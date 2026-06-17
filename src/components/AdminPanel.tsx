@@ -16,7 +16,8 @@ import {
   Plus, Trash2, MapPin, Users, Award, 
   RotateCcw, Sparkles, CheckCircle2, ChevronRight, 
   Eye, Calendar, HelpCircle, Image as ImageIcon, Check, X,
-  Lock, Unlock, EyeOff, KeyRound, Edit, Download, Video
+  Lock, Unlock, EyeOff, KeyRound, Edit, Download, Video,
+  Trophy, Clock, Timer
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -862,6 +863,156 @@ export default function AdminPanel({ onRefreshTrigger, refreshTrigger }: AdminPa
                   </div>
                 </div>
 
+              </div>
+
+              {/* 2C) RANKING / LEADERBOARD SECTION */}
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm" id="panel-admin-ranking">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800">Ranking das Equipes</h3>
+                </div>
+
+                {(() => {
+                  // Build ranking data for all teams in this event
+                  const rankingData = currentTeams.map(tm => {
+                    const playState = gameplayStates.find(s => s.teamId === tm.id && s.eventId === selectedEventId);
+                    const isCompleted = playState?.isCompleted || false;
+                    const startedAt = playState?.startedAt ? new Date(playState.startedAt).getTime() : 0;
+                    const completedAt = playState?.completedAt ? new Date(playState.completedAt).getTime() : 0;
+                    const elapsedMs = isCompleted && completedAt && startedAt ? completedAt - startedAt : 0;
+                    const isInProgress = !!playState && !isCompleted;
+                    const currentProgress = playState ? playState.currentClueIndex : 0;
+                    return { team: tm, isCompleted, isInProgress, elapsedMs, startedAt, currentProgress, playState };
+                  });
+
+                  // Sort: completed first (by time asc), then in-progress (by progress desc), then not started
+                  const sorted = [...rankingData].sort((a, b) => {
+                    if (a.isCompleted && !b.isCompleted) return -1;
+                    if (!a.isCompleted && b.isCompleted) return 1;
+                    if (a.isCompleted && b.isCompleted) return a.elapsedMs - b.elapsedMs;
+                    if (a.isInProgress && !b.isInProgress) return -1;
+                    if (!a.isInProgress && b.isInProgress) return 1;
+                    if (a.isInProgress && b.isInProgress) return b.currentProgress - a.currentProgress;
+                    return 0;
+                  });
+
+                  const completedTeams = sorted.filter(r => r.isCompleted);
+
+                  // Format elapsed time
+                  const formatTime = (ms: number) => {
+                    if (ms <= 0) return '--:--:--';
+                    const totalSecs = Math.floor(ms / 1000);
+                    const hrs = Math.floor(totalSecs / 3600);
+                    const mins = Math.floor((totalSecs % 3600) / 60);
+                    const secs = totalSecs % 60;
+                    if (hrs > 0) return `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+                    return `${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+                  };
+
+                  const podiumStyles = [
+                    { bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', badge: 'bg-amber-400 text-white', emoji: '🥇', label: 'Campeão' },
+                    { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-600', badge: 'bg-slate-400 text-white', emoji: '🥈', label: '2º Lugar' },
+                    { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-400 text-white', emoji: '🥉', label: '3º Lugar' },
+                  ];
+
+                  if (sorted.length === 0) {
+                    return (
+                      <div className="text-center py-6 text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-slate-150">
+                        Cadastre equipes para visualizar o ranking.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {/* PODIUM HIGHLIGHT for completed teams */}
+                      {completedTeams.length > 0 && (
+                        <div className="mb-3">
+                          <div className={`grid gap-2 ${completedTeams.length === 1 ? 'grid-cols-1' : completedTeams.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                            {completedTeams.slice(0, 3).map((entry, idx) => {
+                              const style = podiumStyles[idx];
+                              return (
+                                <div key={entry.team.id} className={`${style.bg} border ${style.border} p-3 rounded-xl text-center space-y-1 ${idx === 0 ? 'ring-2 ring-amber-400/30' : ''}`}>
+                                  <span className="text-2xl">{style.emoji}</span>
+                                  <p className={`text-xs font-extrabold ${style.text}`}>{entry.team.name}</p>
+                                  <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full ${style.badge}`}>
+                                    {style.label}
+                                  </span>
+                                  <p className="text-[10px] font-mono font-bold text-slate-600 flex items-center justify-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {formatTime(entry.elapsedMs)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* FULL RANKING TABLE */}
+                      <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                        {sorted.map((entry, idx) => {
+                          const position = entry.isCompleted ? completedTeams.indexOf(entry) + 1 : '-';
+                          const isTop3 = typeof position === 'number' && position <= 3;
+                          return (
+                            <div
+                              key={entry.team.id}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-xs ${
+                                isTop3
+                                  ? `${podiumStyles[Number(position) - 1].bg} ${podiumStyles[Number(position) - 1].border}`
+                                  : entry.isInProgress
+                                    ? 'bg-indigo-50/50 border-indigo-200'
+                                    : 'bg-slate-50 border-slate-150'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
+                                  isTop3
+                                    ? `${podiumStyles[Number(position) - 1].badge}`
+                                    : entry.isCompleted
+                                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                      : entry.isInProgress
+                                        ? 'bg-indigo-100 text-indigo-600 border border-indigo-200'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                }`}>
+                                  {isTop3 ? podiumStyles[Number(position) - 1].emoji : position}
+                                </span>
+                                <div>
+                                  <p className="font-bold text-slate-700">{entry.team.name}</p>
+                                  <p className="text-[9px] text-slate-400">
+                                    {entry.isCompleted
+                                      ? `Concluído • ${formatTime(entry.elapsedMs)}`
+                                      : entry.isInProgress
+                                        ? `Em andamento • Etapa ${entry.currentProgress + 1}/${currentClues.length}`
+                                        : 'Aguardando início'
+                                    }
+                                  </p>
+                                </div>
+                              </div>
+                              <div>
+                                {entry.isCompleted ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 font-bold text-[9px] px-2 py-0.5 rounded border border-emerald-200">
+                                    <Check className="w-2.5 h-2.5" />
+                                    {formatTime(entry.elapsedMs)}
+                                  </span>
+                                ) : entry.isInProgress ? (
+                                  <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 font-bold text-[9px] px-2 py-0.5 rounded border border-indigo-200 animate-pulse">
+                                    <Timer className="w-2.5 h-2.5" />
+                                    Jogando
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-[9px] font-medium">—</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 3) CLUES / TRACKS REGISTRATION SECTION */}
