@@ -994,277 +994,119 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
               ) : (
                 <div className="space-y-6">
 
-                  {/* PENDING VALIDATION GATES / STATUS FEEDBACKS (Request 5) */}
-                  {(gameState?.pendingValidation || submissionStatus !== 'idle') ? (
-                    <div className="bg-white border border-slate-200 p-8 rounded-2xl text-center space-y-5 shadow-sm" id="card-pending-validation-view">
-                      {submissionStatus === 'success_toast' ? (
-                        <div className="space-y-4 py-6 animate-scale-up">
-                          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 relative">
-                            <Check className="w-7 h-7 text-emerald-600" />
-                            <span className="absolute inset-0 rounded-full bg-emerald-400/20 animate-ping" style={{ animationDuration: '1.5s' }}></span>
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-base font-extrabold text-emerald-800">Sucesso!</h4>
-                            <p className="text-slate-500 text-xs leading-relaxed px-4">
-                              Prova enviada com êxito. Preparando solicitação do facilitador...
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 py-6 animate-fade-in">
-                          <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-250 animate-pulse relative">
-                            <Clock className="w-7 h-7 text-amber-600" />
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-extrabold text-slate-800">Aguardando a validação da prova</h4>
-                            <p className="text-slate-500 text-xs leading-relaxed px-4">
-                              O facilitador foi notificado. Aguarde alguns instantes enquanto a rota corporal seguinte está sendo liberada!
-                            </p>
-                          </div>
-                          {capturedPhotoBase64 && (
-                            <div className="mt-4 max-w-[200px] mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md">
-                              {isVideoMedia(capturedPhotoBase64) ? (
-                                <video src={capturedPhotoBase64} className="w-full h-28 object-cover" controls playsInline />
-                              ) : (
-                                <img src={capturedPhotoBase64} className="w-full h-28 object-cover" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  {/* PENDING VALIDATION - SUCCESS TOAST */}
+                  <div 
+                    style={{ display: (gameState?.pendingValidation || submissionStatus !== 'idle') && submissionStatus === 'success_toast' ? 'block' : 'none' }}
+                    className="bg-white border border-slate-200 p-8 rounded-2xl text-center space-y-5 shadow-sm"
+                  >
+                    <div className="space-y-4 py-6 animate-scale-up">
+                      <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200 relative">
+                        <Check className="w-7 h-7 text-emerald-600" />
+                        <span className="absolute inset-0 rounded-full bg-emerald-400/20 animate-ping" style={{ animationDuration: '1.5s' }}></span>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-base font-extrabold text-emerald-800">Sucesso!</h4>
+                        <p className="text-slate-500 text-xs leading-relaxed px-4">
+                          Prova enviada com êxito. Preparando solicitação do facilitador...
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      {/* SUB SECTION 1: A ROTA DE LATERALIDADE (MOVEMENT INSTRUCTION) */}
-                      <div className="bg-white border border-slate-200 p-5 rounded-2xl relative overflow-hidden shadow-sm" id="card-clue-movement">
-                        <span className="text-[10px] font-bold text-indigo-600 block uppercase tracking-wider mb-2">
-                          Passo {gameState ? gameState.currentClueIndex + 1 : 1} de {activeCluesList.length}
-                        </span>
+                  </div>
 
-                    {/* MOVEMENT INSTRUCTION PARAGRAPH WITH DISPLAY FONT */}
-                    <p className="text-sm font-semibold text-slate-800 font-sans tracking-wide leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
-                      "{activeClue.movementCommand}"
-                    </p>
-
-                    {/* LATERAL DIRECTIONS VISUALIZER (COMPASS) */}
-                    <div className="mt-4 border-t border-slate-100 pt-4 flex flex-col items-center">
-                      <span className="text-[10px] text-slate-400 font-bold mb-3 block uppercase tracking-wider">Direções Ativas de Lateralidade:</span>
-                      
-                      {/* INTEGRATED MINI RADAR MAP */}
-                      <div className="grid grid-cols-3 gap-2 w-full max-w-[210px] text-center" id="lateral-indicators">
-                        <div></div>
-                        <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
-                          directions.forward 
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
-                            : 'bg-slate-50 text-slate-405 text-slate-400 border-slate-150'
-                        }`}>
-                          Frente
+                  {/* PENDING VALIDATION - WAITING FOR FACILITATOR */}
+                  <div 
+                    style={{ display: (gameState?.pendingValidation || submissionStatus !== 'idle') && submissionStatus !== 'success_toast' ? 'block' : 'none' }}
+                    className="bg-white border border-slate-200 p-8 rounded-2xl text-center space-y-5 shadow-sm"
+                  >
+                    <div className="space-y-4 py-6 animate-fade-in">
+                      <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border border-amber-250 animate-pulse relative">
+                        <Clock className="w-7 h-7 text-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-extrabold text-slate-800">Aguardando a validação da prova</h4>
+                        <p className="text-slate-500 text-xs leading-relaxed px-4">
+                          O facilitador foi notificado. Aguarde alguns instantes enquanto a rota corporal seguinte está sendo liberada!
+                        </p>
+                      </div>
+                      <div style={{ display: capturedPhotoBase64 ? 'block' : 'none' }}>
+                        <div className="mt-4 max-w-[200px] mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md">
+                          {capturedPhotoBase64 && (isVideoMedia(capturedPhotoBase64) ? (
+                            <video src={capturedPhotoBase64} className="w-full h-28 object-cover" controls playsInline />
+                          ) : (
+                            <img src={capturedPhotoBase64} className="w-full h-28 object-cover" />
+                          ))}
                         </div>
-                        <div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GAME CONTENT - shown when NOT pending validation */}
+                  <div style={{ display: !(gameState?.pendingValidation || submissionStatus !== 'idle') ? 'block' : 'none' }}>
+
+                    {/* SUB SECTION 1: A ROTA DE LATERALIDADE (MOVEMENT INSTRUCTION) */}
+                    <div className="bg-white border border-slate-200 p-5 rounded-2xl relative overflow-hidden shadow-sm" id="card-clue-movement">
+                      <span className="text-[10px] font-bold text-indigo-600 block uppercase tracking-wider mb-2">
+                        Passo {gameState ? gameState.currentClueIndex + 1 : 1} de {activeCluesList.length}
+                      </span>
+
+                      {/* MOVEMENT INSTRUCTION PARAGRAPH WITH DISPLAY FONT */}
+                      <p className="text-sm font-semibold text-slate-800 font-sans tracking-wide leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        "{activeClue?.movementCommand || ''}"
+                      </p>
+
+                      {/* LATERAL DIRECTIONS VISUALIZER (COMPASS) */}
+                      <div className="mt-4 border-t border-slate-100 pt-4 flex flex-col items-center">
+                        <span className="text-[10px] text-slate-400 font-bold mb-3 block uppercase tracking-wider">Direções Ativas de Lateralidade:</span>
                         
-                        <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
-                          directions.left 
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
-                            : 'bg-slate-50 text-slate-400 border-slate-150'
-                        }`}>
-                          Esquerda
-                        </div>
-                        <div className="bg-slate-50 rounded-full border border-slate-200 flex items-center justify-center">
-                          <Navigation className="w-3.5 h-3.5 text-slate-400 animate-pulse" />
-                        </div>
-                        <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
-                          directions.right 
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
-                            : 'bg-slate-50 text-slate-400 border-slate-150'
-                        }`}>
-                          Direita
-                        </div>
+                        {/* INTEGRATED MINI RADAR MAP */}
+                        <div className="grid grid-cols-3 gap-2 w-full max-w-[210px] text-center" id="lateral-indicators">
+                          <div></div>
+                          <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
+                            directions.forward 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
+                              : 'bg-slate-50 text-slate-400 border-slate-150'
+                          }`}>
+                            Frente
+                          </div>
+                          <div></div>
+                          
+                          <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
+                            directions.left 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
+                              : 'bg-slate-50 text-slate-400 border-slate-150'
+                          }`}>
+                            Esquerda
+                          </div>
+                          <div className="bg-slate-50 rounded-full border border-slate-200 flex items-center justify-center">
+                            <Navigation className="w-3.5 h-3.5 text-slate-400 animate-pulse" />
+                          </div>
+                          <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
+                            directions.right 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
+                              : 'bg-slate-50 text-slate-400 border-slate-150'
+                          }`}>
+                            Direita
+                          </div>
 
-                        <div></div>
-                        <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
-                          directions.backward 
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
-                            : 'bg-slate-50 text-slate-400 border-slate-150'
-                        }`}>
-                          Trás
+                          <div></div>
+                          <div className={`py-1.5 px-2.5 rounded-md text-[10px] border transition-all font-bold uppercase ${
+                            directions.backward 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-sm scale-105' 
+                              : 'bg-slate-50 text-slate-400 border-slate-150'
+                          }`}>
+                            Trás
+                          </div>
+                          <div></div>
                         </div>
-                        <div></div>
                       </div>
                     </div>
                   </div>
 
-                   {/* SUB SECTION 2: VALIDATE POSITION WITH QR CODE */}
-                  <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm" id="card-clue-qrcode-validation">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-650 block uppercase tracking-wider">
-                        Validação de QR Code no Destino
-                      </span>
-                      {/* VALIDADO / AGUARDANDO badge - use display toggle, not conditional mount */}
-                      <span
-                        style={{ display: isQrValidated ? 'inline-flex' : 'none' }}
-                        className="bg-emerald-50 text-emerald-700 font-bold text-[9px] px-2 py-0.5 rounded border border-emerald-250 items-center gap-1"
-                      >
-                        <Check className="w-2.5 h-2.5" />
-                        VALIDADO
-                      </span>
-                      <span
-                        style={{ display: !isQrValidated ? 'inline-flex' : 'none' }}
-                        className="bg-amber-50 text-amber-700 font-bold text-[9px] px-2 py-0.5 rounded border border-amber-200 items-center gap-1.5"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                        AGUARDANDO
-                      </span>
-                    </div>
+                  {/* QR CODE VALIDATION SECTION - already converted to display toggle above */}
 
-                    {/* QR INPUT AREA - hidden when validated, shown when not */}
-                    <div style={{ display: !isQrValidated ? 'block' : 'none' }}>
-                      <div className="space-y-4">
-                        {/* Tab Selector: Real Camera Scan vs Manual Entry */}
-                        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl" id="tabs-qr-selection">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUseCameraScan(true);
-                              setQrValidationError('');
-                            }}
-                            className={`py-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              useCameraScan
-                                ? 'bg-white text-indigo-700 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                          >
-                            <Camera className="w-3.5 h-3.5" />
-                            Câmera (Escanear)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUseCameraScan(false);
-                              setIsScannerActive(false);
-                              setQrValidationError('');
-                            }}
-                            className={`py-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              !useCameraScan
-                                ? 'bg-white text-indigo-700 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                          >
-                            <Key className="w-3.5 h-3.5" />
-                            Digitar Código
-                          </button>
-                        </div>
-
-                        {/* CAMERA SCANNER - always in DOM, visibility controlled by CSS */}
-                        <div style={{ display: useCameraScan ? 'block' : 'none' }} id="camera-scan-container">
-                          <div className="space-y-3">
-                            <p className="text-slate-500 text-xs leading-relaxed text-center">
-                              Aponte sua câmera traseira para o QR Code na plaqueta do ponto final da pista.
-                            </p>
-
-                            {/* Open Scanner button */}
-                            <button
-                              type="button"
-                              style={{ display: !isScannerActive ? 'flex' : 'none' }}
-                              onClick={() => {
-                                setIsScannerActive(true);
-                                setQrValidationError('');
-                              }}
-                              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-md items-center justify-center gap-2 cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
-                              id="btn-activate-scanner"
-                            >
-                              <QrCode className="w-4 h-4 animate-pulse" />
-                              Abrir Scanner da Câmera
-                            </button>
-
-                            {/* Live scanner area */}
-                            <div style={{ display: isScannerActive ? 'block' : 'none' }} id="live-scan-viewarea">
-                              <div className="space-y-3">
-                                <div className="relative mx-auto rounded-xl overflow-hidden border-2 border-indigo-500 bg-slate-950 aspect-square max-w-[240px] flex flex-col justify-center items-center shadow-inner" id="scanner-element-box">
-                                  <div ref={qrContainerRef} className="w-full h-full"></div>
-                                  <div className="absolute inset-4 border border-dashed border-indigo-400/50 pointer-events-none rounded-xl flex items-center justify-center">
-                                    <div className="w-8 h-8 border-t-2 border-l-2 border-emerald-400 absolute top-0 left-0"></div>
-                                    <div className="w-8 h-8 border-t-2 border-r-2 border-emerald-400 absolute top-0 right-0"></div>
-                                    <div className="w-8 h-8 border-b-2 border-l-2 border-emerald-400 absolute bottom-0 left-0"></div>
-                                    <div className="w-8 h-8 border-b-2 border-r-2 border-emerald-400 absolute bottom-0 right-0"></div>
-                                    <div className="w-full h-0.5 bg-emerald-400/80 shadow-[0_0_8px_rgba(52,211,153,0.8)] absolute top-1/2 left-0 -translate-y-1/2 animate-bounce"></div>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: scannerErrorMessage ? 'block' : 'none' }}>
-                                  <p className="text-rose-600 text-[10px] font-semibold text-center bg-rose-50 p-2 rounded-lg border border-rose-100">
-                                    {scannerErrorMessage}
-                                  </p>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setIsScannerActive(false)}
-                                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
-                                  id="btn-deactivate-scanner"
-                                >
-                                  Fechar Câmera / Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* MANUAL CODE ENTRY - always in DOM, visibility controlled by CSS */}
-                        <div style={{ display: !useCameraScan ? 'block' : 'none' }} id="manual-code-container">
-                          <div className="space-y-3">
-                            <p className="text-slate-500 text-xs leading-relaxed">
-                              Caso a câmera tenha problemas, digite o código exato impresso na plaqueta física do destino que você encontrou:
-                            </p>
-                            <form onSubmit={handleValidateQrCode} className="flex gap-2">
-                              <input
-                                type="text"
-                                placeholder="Digite o código da placa"
-                                value={typedQrCode}
-                                onChange={e => {
-                                  setTypedQrCode(e.target.value);
-                                  setQrValidationError('');
-                                }}
-                                className="flex-1 bg-slate-50 border border-slate-250 text-slate-800 text-xs font-mono rounded-xl px-3.5 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none uppercase"
-                                id="input-val-qrcode"
-                              />
-                              <button
-                                type="submit"
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                id="btn-val-qrcode"
-                              >
-                                <Key className="w-3.5 h-3.5" />
-                                Validar
-                              </button>
-                            </form>
-                          </div>
-                        </div>
-
-                        {/* DISPLAY DEVIATION OR FAILURE FEEDBACK */}
-                        <div style={{ display: qrValidationError ? 'flex' : 'none' }} className="text-rose-600 text-[10px] font-semibold font-sans items-start gap-2 bg-rose-50 p-3 rounded-xl border border-rose-150 shadow-sm" id="p-qrcode-error">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-rose-500" />
-                          <p className="leading-tight">{qrValidationError}</p>
-                        </div>
-
-                        {/* METRICS INFOBAR */}
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <span className="text-[9px] text-slate-400 italic">Equipamento com calibragem corporal ativa</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* VALIDATED SUCCESS MESSAGE - shown when QR validated */}
-                    <div style={{ display: isQrValidated ? 'flex' : 'none' }} className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl items-center gap-3 animate-fade-in">
-                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold text-emerald-850">Plaqueta Validada!</p>
-                        <p className="text-[10px] text-slate-550">Seu posicionamento de lateralidade está correto. Siga para a prova motor abaixo!</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SUB SECTION 3: MOTOR COORDINATION OF BODY LATERALITY (REVEALED AND SOLVED AFTER QR VALIDATED) */}
-                  {isQrValidated && (
-                    <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm animate-scale-up" id="card-clue-motor-challenge">
+                  {/* SUB SECTION 3: MOTOR CHALLENGE + PHOTO CAPTURE */}
+                  <div style={{ display: isQrValidated ? 'block' : 'none' }}>
+                    <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm" id="card-clue-motor-challenge">
                       <span className="text-[10px] font-bold text-indigo-650 block uppercase tracking-wider mb-1">
                         Desafio Motor de Lateralidade Corpórea (Prática)
                       </span>
@@ -1272,22 +1114,20 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                       <div className="bg-amber-50/50 border border-amber-200 p-4 rounded-xl space-y-1">
                         <p className="text-xs font-extrabold text-amber-800">Atividade Prática Solicitada:</p>
                         <p className="text-xs font-sans text-slate-700 leading-relaxed font-bold">
-                          {activeClue.motorChallenge}
+                          {activeClue?.motorChallenge || ''}
                         </p>
                       </div>
 
                       {/* GUIDANCE ALERT */}
-                      {!capturedPhotoBase64 && (
-                        <div className="bg-sky-50 border border-sky-150 p-3.5 rounded-xl flex items-start gap-2.5 animate-pulse text-sky-900 text-xs shadow-sm">
-                          <AlertCircle className="w-4 h-4 shrink-0 text-sky-600 mt-0.5" />
-                          <div>
-                            <p className="font-bold">Aguardando arquivo de comprovação</p>
-                            <p className="text-[10px] text-sky-700 font-medium leading-relaxed">
-                              Registre uma foto nítida ou grave um pequeno vídeo de até 10 segundos executando o desafio corporal. O monitor irá analisar este arquivo para liberar a próxima pista!
-                            </p>
-                          </div>
+                      <div style={{ display: !capturedPhotoBase64 ? 'flex' : 'none' }} className="bg-sky-50 border border-sky-150 p-3.5 rounded-xl items-start gap-2.5 animate-pulse text-sky-900 text-xs shadow-sm">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-sky-600 mt-0.5" />
+                        <div>
+                          <p className="font-bold">Aguardando arquivo de comprovação</p>
+                          <p className="text-[10px] text-sky-700 font-medium leading-relaxed">
+                            Registre uma foto nítida ou grave um pequeno vídeo de até 10 segundos executando o desafio corporal. O monitor irá analisar este arquivo para liberar a próxima pista!
+                          </p>
                         </div>
-                      )}
+                      </div>
 
                       {/* PICTURE CAPTURE WORKFLOW SECTION */}
                       <div className="space-y-4">
@@ -1295,10 +1135,10 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                           Registrar Imagem de Comprovação
                         </label>
 
-                        {/* RENDER CURRENT PHOTO/VIDEO PREVIEW IF ALREADY CAPTURED */}
-                        {capturedPhotoBase64 ? (
+                        {/* PHOTO PREVIEW - shown when photo captured */}
+                        <div style={{ display: capturedPhotoBase64 ? 'block' : 'none' }}>
                           <div className="relative rounded-xl overflow-hidden border border-indigo-200/80 shadow-sm" id="captured-preview-box">
-                            {isVideoMedia(capturedPhotoBase64) ? (
+                            {capturedPhotoBase64 && (isVideoMedia(capturedPhotoBase64) ? (
                               <video 
                                 src={capturedPhotoBase64} 
                                 className="w-full h-48 object-contain bg-slate-900"
@@ -1312,7 +1152,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                                 className="w-full h-48 object-cover"
                                 referrerPolicy="no-referrer"
                               />
-                            )}
+                            ))}
                             <div className="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-sm flex items-center gap-1 border border-indigo-500">
                               <Check className="w-3 h-3" />
                               ARQUIVO SELECIONADO
@@ -1327,12 +1167,14 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                               </button>
                             </div>
                           </div>
-                        ) : (
-                          /* RENDER PHOTO ACTION CHOICE (LIVE CAMERA FEED VS ATTACHMENT VS QUICK SIMULATION) */
+                        </div>
+
+                        {/* PHOTO CAPTURE CONTROLS - shown when no photo */}
+                        <div style={{ display: !capturedPhotoBase64 ? 'block' : 'none' }}>
                           <div className="space-y-3">
                             
                             {/* ACTIVE CAMERA VISUALIZER STAGE */}
-                            {showLiveCamera ? (
+                            <div style={{ display: showLiveCamera ? 'block' : 'none' }}>
                               <div className="bg-slate-950 rounded-xl border border-slate-200 overflow-hidden relative" id="live-camera-stage">
                                 <video 
                                   ref={videoRef} 
@@ -1348,7 +1190,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                                   <button
                                     type="button"
                                     onClick={captureSnapshot}
-                                    className="bg-indigo-605 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+                                    className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
                                     id="btn-take-snapshot"
                                   >
                                     <Camera className="w-3.5 h-3.5" />
@@ -1364,46 +1206,46 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                                   </button>
                                 </div>
                               </div>
-                            ) : (
-                              /* NORMAL ACTIONS CARD TRIGGER */
-                              <div className="grid grid-cols-2 gap-3" id="photo-triggers-grid">
-                                
-                                {/* OPEN WEBCAM STREAM */}
-                                <button
-                                  type="button"
-                                  onClick={startCamera}
-                                  className="bg-indigo-50/50 hover:bg-indigo-100/90 text-indigo-700 border border-indigo-200/90 p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all cursor-pointer"
-                                  id="btn-trigger-webcam"
-                                >
-                                  <Camera className="w-5 h-5 text-indigo-650" />
-                                  <span className="text-xs font-bold">Usar Câmera</span>
-                                  <span className="text-[10px] text-slate-400">Do celular/computador</span>
-                                </button>
+                            </div>
 
-                                {/* UPLOAD IMAGE OR SHORT VIDEO FILE (Request 6) */}
-                                <label className="bg-sky-50/50 hover:bg-sky-100/90 text-sky-700 border border-sky-200/90 p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center cursor-pointer transition-all">
-                                  <Upload className="w-5 h-5 text-sky-650" />
-                                  <span className="text-xs font-bold">Anexar Foto / Vídeo</span>
-                                  <span className="text-[10px] text-slate-400 font-semibold">Vídeos com máx 10 segundos</span>
-                                  <input 
-                                    type="file" 
-                                    accept="image/*,video/*"
-                                    capture="environment"
-                                    onChange={handleFileUpload}
-                                    className="hidden" 
-                                  />
-                                </label>
+                            {/* NORMAL ACTIONS CARD TRIGGER */}
+                            <div style={{ display: !showLiveCamera ? 'grid' : 'none' }} className="grid-cols-2 gap-3" id="photo-triggers-grid">
+                              
+                              {/* OPEN WEBCAM STREAM */}
+                              <button
+                                type="button"
+                                onClick={startCamera}
+                                className="bg-indigo-50/50 hover:bg-indigo-100/90 text-indigo-700 border border-indigo-200/90 p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all cursor-pointer"
+                                id="btn-trigger-webcam"
+                              >
+                                <Camera className="w-5 h-5 text-indigo-650" />
+                                <span className="text-xs font-bold">Usar Câmera</span>
+                                <span className="text-[10px] text-slate-400">Do celular/computador</span>
+                              </button>
 
-                              </div>
-                            )}
+                              {/* UPLOAD IMAGE OR SHORT VIDEO FILE */}
+                              <label className="bg-sky-50/50 hover:bg-sky-100/90 text-sky-700 border border-sky-200/90 p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center cursor-pointer transition-all">
+                                <Upload className="w-5 h-5 text-sky-650" />
+                                <span className="text-xs font-bold">Anexar Foto / Vídeo</span>
+                                <span className="text-[10px] text-slate-400 font-semibold">Vídeos com máx 10 segundos</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*,video/*"
+                                  capture="environment"
+                                  onChange={handleFileUpload}
+                                  className="hidden" 
+                                />
+                              </label>
 
-                            {cameraError && (
+                            </div>
+
+                            <div style={{ display: cameraError ? 'block' : 'none' }}>
                               <p className="text-amber-700 text-[10px] bg-amber-50 p-2.5 rounded-lg border border-amber-250">
                                 {cameraError}
                               </p>
-                            )}
+                            </div>
 
-                            {/* BACKUP INSTANT ILLUSTRATIVE GENERATION (PROCEDURAL SIMULATION) */}
+                            {/* BACKUP INSTANT ILLUSTRATIVE GENERATION */}
                             <div className="pt-1">
                               <button
                                 type="button"
@@ -1417,7 +1259,7 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                             </div>
 
                           </div>
-                        )}
+                        </div>
 
                       </div>
 
@@ -1437,17 +1279,13 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
                           Salvar Desafio e Avançar
                           <ArrowRight className="w-4 h-4" />
                         </button>
-                        {!capturedPhotoBase64 && (
-                          <p className="text-[10px] text-slate-400 font-medium text-center mt-1.5">
-                            Submeta ou simule a imagem comprobatória para liberar o avanço corporal.
-                          </p>
-                        )}
+                        <p style={{ display: !capturedPhotoBase64 ? 'block' : 'none' }} className="text-[10px] text-slate-400 font-medium text-center mt-1.5">
+                          Submeta ou simule a imagem comprobatória para liberar o avanço corporal.
+                        </p>
                       </div>
 
                     </div>
-                  )}
-                    </>
-                  )}
+                  </div>
 
                   {/* RESET BUTTON */}
                   <div className="pt-2 text-center" id="session-restart-underlay">
@@ -1464,6 +1302,8 @@ export default function PlayerView({ onRefreshTrigger, refreshTrigger }: PlayerV
 
                 </div>
               )}
+
+
 
             </div>
           )}
